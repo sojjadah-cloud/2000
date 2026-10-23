@@ -32,6 +32,14 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# local database and uploaded files
+/.data/
+/storage/
+
+# design references (brand guide + design images) — kept private, not published
+/design-refs/
 
 # vercel
 .vercel

@@ -1,0 +1,679 @@
+// منصة ألفين — نموذج البيانات
+// قاعدة: كل مادة تُحفظ مرة واحدة وتُربط بالأعداد والمبدعين والتصنيفات عبر جداول ربط.
+// isDemo يميّز بيانات العرض التجريبية لإزالتها قبل الإطلاق (npm run demo:remove).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PublishStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum MediaKind {
+  IMAGE
+  PDF
+  VIDEO
+  AUDIO
+  OTHER
+}
+
+enum CategoryScope {
+  WORK
+  ARTICLE
+  EVENT
+  FIELD
+}
+
+enum IssueFormat {
+  DIGITAL
+  PRINT
+  BOTH
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum EventLifecycle {
+  SCHEDULED
+  POSTPONED
+  CANCELLED
+}
+
+enum RegistrationStatus {
+  CONFIRMED
+  WAITLIST
+  CANCELLED
+}
+
+enum SubmissionStatus {
+  RECEIVED
+  IN_REVIEW
+  NEEDS_CHANGES
+  ACCEPTED
+  DECLINED
+  PUBLISHED
+}
+
+enum SubscriberStatus {
+  PENDING
+  CONFIRMED
+  UNSUBSCRIBED
+}
+
+enum MessageStatus {
+  NEW
+  READ
+  ARCHIVED
+}
+
+enum EmailStatus {
+  SENT
+  FAILED
+  NOT_CONFIGURED
+}
+
+// ───────── المستخدمون والصلاحيات ─────────
+
+model Role {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  nameAr      String
+  nameEn      String
+  permissions String[]
+  users       User[]
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  name         String
+  passwordHash String
+  roleId       String
+  role         Role       @relation(fields: [roleId], references: [id])
+  active       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  lastLoginAt  DateTime?
+  sessions     Session[]
+  auditLogs    AuditLog[]
+}
+
+model Session {
+  id        String   @id // sha256 لرمز الجلسة؛ الرمز نفسه لا يُخزَّن
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  entity    String
+  entityId  String?
+  summary   String
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+model RateLimit {
+  key         String   @id
+  count       Int
+  windowStart DateTime
+}
+
+// ───────── الوسائط والتصنيفات ─────────
+
+model MediaAsset {
+  id         String    @id @default(cuid())
+  kind       MediaKind
+  url        String // مسار عام (/demo/... أو /media/...)
+  storageKey String? // مفتاح الملف في التخزين لما رُفع عبر المنصة
+  fileName   String
+  mime       String
+  size       Int
+  width      Int?
+  height     Int?
+  altAr      String?
+  altEn      String?
+  credit     String?
+  rights     String?
+  source     String? // مصدر الأصل (مثلاً: قص من تصميم الرئيسية)
+  isDemo     Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+
+  issueCovers       Issue[]        @relation("IssueCover")
+  issuePdfs         Issue[]        @relation("IssuePdf")
+  workThumbs        CreativeWork[] @relation("WorkThumb")
+  workMedia         WorkMedia[]
+  articleCovers     Article[]      @relation("ArticleCover")
+  creatorPhotos     Creator[]      @relation("CreatorPhoto")
+  eventPosters      Event[]        @relation("EventPoster")
+  eventMedia        EventMedia[]
+  teamPhotos        TeamMember[]
+  partnerLogos      Partner[]
+  homeFeatureImages HomeFeature[]
+  issuePromos       Issue[]        @relation("IssuePromo")
+  homeHeroes        SiteSettings[] @relation("HomeHero")
+}
+
+model Category {
+  id        String        @id @default(cuid())
+  scope     CategoryScope
+  slug      String
+  nameAr    String
+  nameEn    String
+  sortOrder Int           @default(0)
+
+  works    CreativeWork[]
+  articles Article[]
+  events   Event[]
+  creators Creator[]      @relation("CreatorFields")
+
+  @@unique([scope, slug])
+}
+
+model Tag {
+  id       String         @id @default(cuid())
+  slug     String         @unique
+  nameAr   String
+  nameEn   String?
+  works    CreativeWork[]
+  articles Article[]
+}
+
+// ───────── المبدعون ─────────
+
+model Creator {
+  id            String         @id @default(cuid())
+  slug          String         @unique
+  displayName   String
+  displayNameEn String?
+  photoId       String?
+  photo         MediaAsset?    @relation("CreatorPhoto", fields: [photoId], references: [id])
+  headline      String? // سطر تعريفي قصير
+  headlineEn    String?
+  bio           String?
+  bioEn         String?
+  quote         String?
+  quoteEn       String?
+  fields        Category[]     @relation("CreatorFields")
+  city          String?
+  website       String?
+  socialLinks   Json? // [{label,url}] روابط مصرح بنشرها
+  openToCollab  Boolean        @default(false)
+  // بيانات خاصة لا تُعرض للعامة
+  contactEmail  String?
+  consentGiven  Boolean        @default(false)
+  consentAt     DateTime?
+  teamNotes     String?
+  approval      ApprovalStatus @default(PENDING)
+  archivedAt    DateTime?
+  searchText    String         @default("")
+  isDemo        Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  works    WorkCreator[]
+  articles ArticleAuthor[]
+  issues   IssueContributor[]
+  events   EventSpeaker[]
+}
+
+// ───────── الأعداد ─────────
+
+model Issue {
+  id                String        @id @default(cuid())
+  number            Int           @unique
+  slug              String        @unique
+  title             String
+  titleEn           String?
+  theme             String
+  themeEn           String?
+  summary           String
+  summaryEn         String?
+  coverId           String?
+  cover             MediaAsset?   @relation("IssueCover", fields: [coverId], references: [id])
+  promoImageId      String? // صورة العرض البارزة (مثل صورة المجلات في صفحة الأعداد)
+  promoImage        MediaAsset?   @relation("IssuePromo", fields: [promoImageId], references: [id])
+  releaseDate       DateTime?
+  language          String        @default("ar") // ar | en | ar,en
+  editorialHtml     String        @default("")
+  pdfId             String?
+  pdf               MediaAsset?   @relation("IssuePdf", fields: [pdfId], references: [id])
+  allowDownload     Boolean       @default(false)
+  format            IssueFormat   @default(DIGITAL)
+  editionNote       String? // مثل: إصدار تجريبي
+  printAvailability String?
+  printUrl          String?
+  ogTitle           String?
+  ogDescription     String?
+  status            PublishStatus @default(DRAFT)
+  publishedAt       DateTime?
+  searchText        String        @default("")
+  isDemo            Boolean       @default(false)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  team     IssueContributor[]
+  works    CreativeWork[]
+  articles Article[]
+}
+
+model IssueContributor {
+  id        String   @id @default(cuid())
+  issueId   String
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  creatorId String?
+  creator   Creator? @relation(fields: [creatorId], references: [id], onDelete: SetNull)
+  name      String
+  role      String
+  sortOrder Int      @default(0)
+}
+
+// ───────── الأعمال الإبداعية ─────────
+
+model CreativeWork {
+  id            String        @id @default(cuid())
+  slug          String        @unique
+  title         String
+  titleEn       String?
+  categoryId    String
+  category      Category      @relation(fields: [categoryId], references: [id])
+  description   String        @default("") // HTML معقّم
+  descriptionEn String?
+  thumbnailId   String?
+  thumbnail     MediaAsset?   @relation("WorkThumb", fields: [thumbnailId], references: [id])
+  videoUrl      String?
+  audioUrl      String?
+  tools         String?
+  year          Int?
+  issueId       String?
+  issue         Issue?        @relation(fields: [issueId], references: [id], onDelete: SetNull)
+  issueOrder    Int           @default(0)
+  rights        String?
+  collaborators String?
+  editorsPick   Boolean       @default(false)
+  sortOrder     Int           @default(0)
+  status        PublishStatus @default(DRAFT)
+  publishedAt   DateTime?
+  searchText    String        @default("")
+  isDemo        Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  creators WorkCreator[]
+  media    WorkMedia[]
+  tags     Tag[]
+}
+
+model WorkCreator {
+  workId    String
+  creatorId String
+  role      String?
+  sortOrder Int          @default(0)
+  work      CreativeWork @relation(fields: [workId], references: [id], onDelete: Cascade)
+  creator   Creator      @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@id([workId, creatorId])
+}
+
+model WorkMedia {
+  id        String       @id @default(cuid())
+  workId    String
+  work      CreativeWork @relation(fields: [workId], references: [id], onDelete: Cascade)
+  assetId   String
+  asset     MediaAsset   @relation(fields: [assetId], references: [id])
+  caption   String?
+  sortOrder Int          @default(0)
+}
+
+// ───────── المقالات ─────────
+
+model Article {
+  id             String        @id @default(cuid())
+  slug           String        @unique
+  title          String
+  excerpt        String
+  bodyHtml       String        @default("")
+  lang           String        @default("ar")
+  categoryId     String
+  category       Category      @relation(fields: [categoryId], references: [id])
+  coverId        String?
+  cover          MediaAsset?   @relation("ArticleCover", fields: [coverId], references: [id])
+  issueId        String?
+  issue          Issue?        @relation(fields: [issueId], references: [id], onDelete: SetNull)
+  issueOrder     Int           @default(0)
+  sources        String? // سطر لكل مصدر
+  translationId  String?       @unique
+  translation    Article?      @relation("ArticleTranslation", fields: [translationId], references: [id], onDelete: SetNull)
+  translationOf  Article?      @relation("ArticleTranslation")
+  seoTitle       String?
+  seoDescription String?
+  readingMinutes Int           @default(1)
+  featured       Boolean       @default(false)
+  sortOrder      Int           @default(0)
+  status         PublishStatus @default(DRAFT)
+  publishedAt    DateTime?
+  searchText     String        @default("")
+  isDemo         Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  authors ArticleAuthor[]
+  tags    Tag[]
+}
+
+model ArticleAuthor {
+  articleId String
+  creatorId String
+  role      String  @default("author") // author | contributor | translator | photographer
+  sortOrder Int     @default(0)
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  creator   Creator @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@id([articleId, creatorId])
+}
+
+// ───────── الفعاليات ─────────
+
+model Event {
+  id                   String         @id @default(cuid())
+  slug                 String         @unique
+  title                String
+  titleEn              String?
+  categoryId           String
+  category             Category       @relation(fields: [categoryId], references: [id])
+  posterId             String?
+  poster               MediaAsset?    @relation("EventPoster", fields: [posterId], references: [id])
+  summary              String
+  summaryEn            String?
+  descriptionHtml      String         @default("")
+  startsAt             DateTime
+  endsAt               DateTime
+  timezone             String         @default("Asia/Muscat")
+  venue                String?
+  venueEn              String?
+  mapUrl               String?
+  onlineUrl            String?
+  language             String         @default("ar")
+  audience             String?
+  programHtml          String?
+  capacity             Int?
+  fee                  String?
+  registrationEnabled  Boolean        @default(true)
+  registrationOpensAt  DateTime?
+  registrationClosesAt DateTime?
+  waitlistEnabled      Boolean        @default(false)
+  instructions         String?
+  lifecycle            EventLifecycle @default(SCHEDULED)
+  recordingUrl         String?
+  status               PublishStatus  @default(DRAFT)
+  publishedAt          DateTime?
+  searchText           String         @default("")
+  isDemo               Boolean        @default(false)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  speakers      EventSpeaker[]
+  partners      Partner[]
+  registrations EventRegistration[]
+  media         EventMedia[]
+}
+
+model EventSpeaker {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  creatorId String?
+  creator   Creator? @relation(fields: [creatorId], references: [id], onDelete: SetNull)
+  name      String
+  title     String?
+  sortOrder Int      @default(0)
+}
+
+model EventMedia {
+  id        String     @id @default(cuid())
+  eventId   String
+  event     Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  assetId   String
+  asset     MediaAsset @relation(fields: [assetId], references: [id])
+  sortOrder Int        @default(0)
+}
+
+model EventRegistration {
+  id              String             @id @default(cuid())
+  eventId         String
+  event           Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name            String
+  email           String
+  status          RegistrationStatus @default(CONFIRMED)
+  manageTokenHash String             @unique
+  createdAt       DateTime           @default(now())
+
+  @@unique([eventId, email])
+  @@index([eventId, status])
+}
+
+// ───────── المشاركات الواردة ─────────
+
+model Submission {
+  id                  String           @id @default(cuid())
+  code                String           @unique
+  type                String
+  name                String
+  email               String
+  bio                 String?
+  field               String?
+  title               String
+  description         String
+  language            String           @default("ar")
+  collaborators       String?
+  previouslyPublished Boolean          @default(false)
+  publishedWhere      String?
+  rightsStatement     String
+  isMinor             Boolean          @default(false)
+  guardianName        String?
+  guardianEmail       String?
+  guardianConsent     Boolean          @default(false)
+  termsAccepted       Boolean          @default(false)
+  status              SubmissionStatus @default(RECEIVED)
+  trackingTokenHash   String           @unique
+  messageToSubmitter  String?
+  reviewerNotes       String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  revisions SubmissionRevision[]
+  history   SubmissionStatusLog[]
+}
+
+model SubmissionRevision {
+  id           String           @id @default(cuid())
+  submissionId String
+  submission   Submission       @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  number       Int
+  note         String?
+  privateLink  String?
+  createdAt    DateTime         @default(now())
+  files        SubmissionFile[]
+
+  @@unique([submissionId, number])
+}
+
+model SubmissionFile {
+  id           String             @id @default(cuid())
+  revisionId   String
+  revision     SubmissionRevision @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  storageKey   String // تخزين خاص، لا يُخدم إلا للإدارة
+  originalName String
+  mime         String
+  size         Int
+}
+
+model SubmissionStatusLog {
+  id           String            @id @default(cuid())
+  submissionId String
+  submission   Submission        @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  fromStatus   SubmissionStatus?
+  toStatus     SubmissionStatus
+  note         String?
+  actor        String // "submitter" أو اسم عضو الفريق
+  createdAt    DateTime          @default(now())
+}
+
+// ───────── النشرات والتواصل ─────────
+
+model Subscriber {
+  id               String           @id @default(cuid())
+  email            String           @unique
+  lang             String           @default("ar")
+  status           SubscriberStatus @default(PENDING)
+  confirmTokenHash String?          @unique
+  manageTokenHash  String           @unique
+  confirmedAt      DateTime?
+  unsubscribedAt   DateTime?
+  createdAt        DateTime         @default(now())
+}
+
+model Newsletter {
+  id         String    @id @default(cuid())
+  slug       String    @unique
+  subject    String
+  bodyHtml   String
+  archived   Boolean   @default(true) // يظهر في الأرشيف العام بعد الإرسال
+  sentAt     DateTime?
+  recipients Int       @default(0)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model ContactMessage {
+  id        String        @id @default(cuid())
+  name      String
+  email     String
+  kind      String
+  message   String
+  status    MessageStatus @default(NEW)
+  createdAt DateTime      @default(now())
+}
+
+model EmailOutbox {
+  id        String      @id @default(cuid())
+  to        String
+  subject   String
+  html      String
+  purpose   String
+  status    EmailStatus
+  error     String?
+  createdAt DateTime    @default(now())
+}
+
+// ───────── عن ألفين والرئيسية والإعدادات ─────────
+
+model TeamMember {
+  id        String      @id @default(cuid())
+  name      String
+  nameEn    String?
+  role      String
+  roleEn    String?
+  bio       String?
+  photoId   String?
+  photo     MediaAsset? @relation(fields: [photoId], references: [id])
+  sortOrder Int         @default(0)
+  visible   Boolean     @default(false)
+  isDemo    Boolean     @default(false)
+}
+
+model Partner {
+  id        String      @id @default(cuid())
+  name      String
+  nameEn    String?
+  kind      String?
+  url       String?
+  logoId    String?
+  logo      MediaAsset? @relation(fields: [logoId], references: [id])
+  sortOrder Int         @default(0)
+  visible   Boolean     @default(false)
+  isDemo    Boolean     @default(false)
+  events    Event[]
+}
+
+model Milestone {
+  id          String  @id @default(cuid())
+  label       String // السنة أو التاريخ كما يُعرض
+  title       String
+  description String?
+  sortOrder   Int     @default(0)
+  visible     Boolean @default(false)
+}
+
+model Achievement {
+  id          String  @id @default(cuid())
+  title       String
+  description String?
+  sourceUrl   String? // توثيق الإنجاز
+  sortOrder   Int     @default(0)
+  visible     Boolean @default(false)
+}
+
+model HomeFeature {
+  id              String      @id @default(cuid())
+  slot            String // PICKS | SPOTLIGHT | LATEST_WRITING
+  targetType      String // WORK | ARTICLE | ISSUE | CREATOR | EVENT
+  targetId        String
+  imageOverrideId String?
+  imageOverride   MediaAsset? @relation(fields: [imageOverrideId], references: [id], onDelete: SetNull)
+  sortOrder       Int         @default(0)
+  active          Boolean     @default(true)
+  isDemo          Boolean     @default(false)
+
+  @@index([slot, active, sortOrder])
+}
+
+model SiteSettings {
+  id                       Int         @id @default(1)
+  heroTitle                String      @default("مساحة لجيلٍ")
+  heroHighlight            String      @default("يبدع")
+  heroText                 String      @default("أصوات شابة، حكايات تُروى،\nوإبداع يستحق أن يُرى.")
+  heroTitleEn              String?
+  heroHighlightEn          String?
+  heroTextEn               String?
+  heroIssueId              String?
+  homeHeroImageId          String?
+  homeHeroImage            MediaAsset? @relation("HomeHero", fields: [homeHeroImageId], references: [id])
+  tickerWords              String[]
+  tickerWordsEn            String[]
+  footerTagline            String      @default("مجلة ألفين للشباب والإبداع في عُمان")
+  footerTaglineEn          String?
+  copyrightYear            String      @default("2024")
+  socialLinks              Json        @default("[]")
+  englishEnabled           Boolean     @default(true)
+  newsletterArchiveEnabled Boolean     @default(false)
+  waitlistDefault          Boolean     @default(false)
+  aboutStory               String?
+  aboutVision              String?
+  aboutMission             String?
+  aboutFields              String[]
+  collaborationText        String?
+  publicContactEmail       String?
+  submissionPolicy         String?
+  updatedAt                DateTime    @updatedAt
+}
