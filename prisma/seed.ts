@@ -83,9 +83,19 @@ async function main() {
     roles[r.key] = role.id;
   }
 
+  // الإنتاج: لا حسابات تجريبية؛ المدير الأول فقط إن زُوّد بريده وكلمة مروره عبر متغيرات البيئة
+  if (process.env.NODE_ENV === 'production') {
+    const email = process.env.SEED_ADMIN_EMAIL;
+    const password = process.env.SEED_ADMIN_PASSWORD;
+    if (email && password && !(await db.user.findUnique({ where: { email } }))) {
+      await db.user.create({ data: { email, name: 'مدير المنصة', roleId: roles.admin, passwordHash: await bcrypt.hash(password, 12) } });
+      console.log('تم إنشاء حساب المدير من متغيرات البيئة.');
+    }
+  }
+
   // حسابات التطوير: كلمات مرور عشوائية تُحفظ في ملف محلي مستبعد من git
   const credsFile = '.data/dev-credentials.txt';
-  if (!(await db.user.count())) {
+  if (process.env.NODE_ENV !== 'production' && !(await db.user.count())) {
     const lines: string[] = ['# حسابات التطوير المحلية — لا تُستخدم في الإنتاج', ''];
     const accounts = [
       { key: 'admin', email: process.env.SEED_ADMIN_EMAIL || 'admin@alfeen.test', name: 'مدير المنصة', password: process.env.SEED_ADMIN_PASSWORD || genPassword() },

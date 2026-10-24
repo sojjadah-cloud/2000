@@ -1,0 +1,12 @@
+node_modules
+.next
+.data
+storage
+design-refs
+.env
+.env.*
+!.env.example
+.git
+.claude
+*.log
+tsconfig.tsbuildinfo
