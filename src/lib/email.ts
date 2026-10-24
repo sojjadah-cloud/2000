@@ -6,7 +6,9 @@ import { db } from './db';
 // ويعيد send قيمة false لتُبلغ الواجهة المستخدم بصدق أن الرسالة لم تُرسل.
 
 export function emailConfigured(): boolean {
-  return !!(process.env.SMTP_HOST && process.env.SMTP_FROM);
+  // مع اسم مستخدم يجب وجود كلمة المرور أيضًا، وإلا نُبلغ بأن البريد غير مهيأ بدل محاولة فاشلة
+  const { SMTP_HOST, SMTP_FROM, SMTP_USER, SMTP_PASSWORD } = process.env;
+  return !!(SMTP_HOST && SMTP_FROM && (!SMTP_USER || SMTP_PASSWORD));
 }
 
 let transport: ReturnType<typeof nodemailer.createTransport> | null = null;
@@ -16,7 +18,12 @@ function getTransport() {
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT || 587),
       secure: Number(process.env.SMTP_PORT) === 465,
-      auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD } : undefined,
+      // كلمات مرور تطبيقات Google تُعرض بمسافات؛ نزيلها إن لُصقت كما هي
+      auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: (process.env.SMTP_PASSWORD ?? '').replace(/\s+/g, '') } : undefined,
+      // مهلات قصيرة حتى لا يتعلق نموذج إذا تعذّر الوصول لخادم البريد
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 20_000,
     });
   }
   return transport;
@@ -32,7 +39,8 @@ export async function sendEmail(opts: { to: string; subject: string; html: strin
     await db.emailOutbox.create({ data: { ...opts, status: 'SENT' } });
     return true;
   } catch (err) {
-    // لا نسجّل محتوى الرسالة أو بيانات الاعتماد في سجلات الخادم
+    // لا نسجّل محتوى الرسالة أو بيانات الاعتماد في سجلات الخادم — رمز الخطأ فقط للتشخيص
+    console.error('[email] فشل الإرسال:', (err as { code?: string }).code ?? (err as Error).name, opts.purpose);
     await db.emailOutbox.create({ data: { ...opts, status: 'FAILED', error: (err as Error).message.slice(0, 300) } });
     return false;
   }
