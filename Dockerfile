@@ -21,8 +21,12 @@ FROM base AS runner
 ENV NODE_ENV=production
 ENV PORT=10000
 COPY --from=build /app ./
+# أدوات البناء (TypeScript وESLint وTailwind وPostgreSQL المحلي) لا تلزم وقت التشغيل:
+# حذفها يصغّر الصورة فيصبح سحبها وإقلاعها أسرع. نحتفظ بعميل Prisma المولَّد وملفات .next.
+RUN npm prune --omit=dev --no-audit --no-fund \
+  && rm -rf .next/cache \
+  && mkdir -p /app/storage && chown -R node:node /app/storage /app/.next
 # المستخدم node بدل root
-RUN mkdir -p /app/storage && chown -R node:node /app/storage /app/.next
 USER node
 EXPOSE 10000
 CMD ["node", "scripts/start-prod.mjs"]

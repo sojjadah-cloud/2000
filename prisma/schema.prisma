@@ -133,6 +133,13 @@ model AuditLog {
   @@index([createdAt])
 }
 
+// قيم تشغيلية صغيرة (مثل بصمة المخطط المطبّق) لتسريع إقلاع الخادم
+model AppMeta {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
 model RateLimit {
   key         String   @id
   count       Int

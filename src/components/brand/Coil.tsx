@@ -3,7 +3,8 @@
 
 function coilPath(loops: number, spread: number, radius: number, stretch: number) {
   const pts: string[] = [];
-  const steps = loops * 48;
+  // 24 نقطة لكل حلقة كافية لمنحنى ناعم مع وصلات مستديرة، وتُبقي حجم HTML صغيرًا
+  const steps = loops * 24;
   const tMax = loops * Math.PI * 2;
   for (let i = 0; i <= steps; i++) {
     const t = (i / steps) * tMax;

@@ -5,9 +5,10 @@ import { translate } from '@/lib/i18n/dict';
 import './globals.css';
 
 // بديل مؤقت لخط Thmanyah المحدد في دليل الهوية حتى توفر ملفاته المرخّصة.
+// ثلاثة أوزان فقط (500 كان يضيف ملفين لفرق بصري طفيف؛ font-medium يظهر بالوزن العادي).
 const arabic = IBM_Plex_Sans_Arabic({
   subsets: ['arabic', 'latin'],
-  weight: ['400', '500', '600', '700'],
+  weight: ['400', '600', '700'],
   variable: '--font-arabic',
   display: 'swap',
 });

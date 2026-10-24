@@ -78,6 +78,7 @@ export default async function HomePage() {
                 asset={heroImage}
                 lang={lang}
                 priority
+                quality={75}
                 sizes="(min-width: 768px) 640px, 100vw"
                 className="relative mx-auto block h-auto w-full max-w-[34rem] md:max-w-[40rem]"
               />

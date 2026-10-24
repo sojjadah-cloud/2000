@@ -1,9 +1,9 @@
 import 'server-only';
-import { cache } from 'react';
 import type { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { isPublic, publicCreatorWhere, publicWhere } from '@/lib/publish';
 import { normalizeForSearch } from '@/lib/text';
+import { cached } from '@/lib/cache';
 
 // طبقة الوصول العامة: كل دالة هنا تُرجع المحتوى المنشور فقط
 // ولا تُرجع الحقول الخاصة (بريد المبدع، ملاحظات الفريق...).
@@ -32,7 +32,7 @@ const issueCard = {
 } satisfies Prisma.IssueSelect;
 export type IssueCard = Prisma.IssueGetPayload<{ select: typeof issueCard }>;
 
-export async function latestIssue(preferredId?: string | null) {
+async function latestIssueQuery(preferredId?: string | null) {
   if (preferredId) {
     const preferred = await db.issue.findFirst({ where: { id: preferredId, ...publicWhere() }, select: issueCard });
     if (preferred) return preferred;
@@ -40,7 +40,7 @@ export async function latestIssue(preferredId?: string | null) {
   return db.issue.findFirst({ where: publicWhere(), orderBy: [{ number: 'desc' }], select: issueCard });
 }
 
-export async function listIssues(opts: { q?: string; year?: number; format?: 'DIGITAL' | 'PRINT'; page?: number }) {
+async function listIssuesQuery(opts: { q?: string; year?: number; format?: 'DIGITAL' | 'PRINT'; page?: number }) {
   const where: Prisma.IssueWhereInput = { ...publicWhere() };
   if (opts.q) where.searchText = { contains: normalizeForSearch(opts.q) };
   if (opts.year) where.releaseDate = { gte: new Date(Date.UTC(opts.year, 0, 1)), lt: new Date(Date.UTC(opts.year + 1, 0, 1)) };
@@ -54,7 +54,7 @@ export async function listIssues(opts: { q?: string; year?: number; format?: 'DI
   return { items, total, page, hasMore: items.length < total };
 }
 
-export async function issueYears() {
+async function issueYearsQuery() {
   const rows = await db.issue.findMany({ where: publicWhere(), select: { releaseDate: true } });
   return [...new Set(rows.map((r) => r.releaseDate?.getUTCFullYear()).filter((y): y is number => !!y))].sort((a, b) => b - a);
 }
@@ -83,11 +83,11 @@ export function issueDetailInclude() {
 }
 export type IssueDetail = Prisma.IssueGetPayload<{ include: ReturnType<typeof issueDetailInclude> }>;
 
-export async function getIssue(slug: string) {
+async function getIssueQuery(slug: string) {
   return db.issue.findFirst({ where: { slug, ...publicWhere() }, include: issueDetailInclude() });
 }
 
-export async function relatedIssues(excludeId: string) {
+async function relatedIssuesQuery(excludeId: string) {
   return db.issue.findMany({ where: { ...publicWhere(), id: { not: excludeId } }, orderBy: { number: 'desc' }, take: 3, select: issueCard });
 }
 
@@ -100,7 +100,7 @@ const workCard = {
 } satisfies Prisma.CreativeWorkSelect;
 export type WorkCard = Prisma.CreativeWorkGetPayload<{ select: typeof workCard }>;
 
-export async function listWorks(opts: { q?: string; category?: string; sort?: 'new' | 'old'; page?: number }) {
+async function listWorksQuery(opts: { q?: string; category?: string; sort?: 'new' | 'old'; page?: number }) {
   const where: Prisma.CreativeWorkWhereInput = { ...publicWhere() };
   if (opts.category) where.category = { slug: opts.category, scope: 'WORK' };
   if (opts.q) {
@@ -132,11 +132,11 @@ export function workDetailInclude() {
 }
 export type WorkDetail = Prisma.CreativeWorkGetPayload<{ include: ReturnType<typeof workDetailInclude> }>;
 
-export async function getWork(slug: string) {
+async function getWorkQuery(slug: string) {
   return db.creativeWork.findFirst({ where: { slug, ...publicWhere() }, include: workDetailInclude() });
 }
 
-export async function relatedWorks(work: { id: string; categoryId: string }) {
+async function relatedWorksQuery(work: { id: string; categoryId: string }) {
   return db.creativeWork.findMany({
     where: { ...publicWhere(), id: { not: work.id }, categoryId: work.categoryId },
     orderBy: { publishedAt: 'desc' },
@@ -165,7 +165,7 @@ export function localizeArticle(a: Pick<ArticleCard, 'slug' | 'title' | 'excerpt
   return { slug: a.slug, title: a.title, excerpt: a.excerpt, lang: a.lang };
 }
 
-export async function listArticles(opts: { q?: string; category?: string; page?: number; excludeIds?: string[]; take?: number }) {
+async function listArticlesQuery(opts: { q?: string; category?: string; page?: number; excludeIds?: string[]; take?: number }) {
   const where: Prisma.ArticleWhereInput = { ...publicWhere(), ...originalsOnly };
   if (opts.category) where.category = { slug: opts.category, scope: 'ARTICLE' };
   if (opts.excludeIds?.length) where.id = { notIn: opts.excludeIds };
@@ -182,7 +182,7 @@ export async function listArticles(opts: { q?: string; category?: string; page?:
   return { items, total, page, hasMore: items.length < total };
 }
 
-export async function featuredArticle(category?: string) {
+async function featuredArticleQuery(category?: string) {
   return db.article.findFirst({
     where: { ...publicWhere(), ...originalsOnly, featured: true, ...(category ? { category: { slug: category, scope: 'ARTICLE' as const } } : {}) },
     orderBy: [{ sortOrder: 'asc' }, { publishedAt: 'desc' }],
@@ -206,11 +206,11 @@ export function articleDetailInclude() {
 }
 export type ArticleDetail = Prisma.ArticleGetPayload<{ include: ReturnType<typeof articleDetailInclude> }>;
 
-export async function getArticle(slug: string) {
+async function getArticleQuery(slug: string) {
   return db.article.findFirst({ where: { slug, ...publicWhere() }, include: articleDetailInclude() });
 }
 
-export async function relatedArticles(a: { id: string; categoryId: string; excludeId?: string }) {
+async function relatedArticlesQuery(a: { id: string; categoryId: string; excludeId?: string }) {
   return db.article.findMany({
     where: { ...publicWhere(), ...originalsOnly, id: { notIn: [a.id, a.excludeId].filter((x): x is string => !!x) }, categoryId: a.categoryId },
     orderBy: { publishedAt: 'desc' },
@@ -229,7 +229,7 @@ const eventCard = {
 } satisfies Prisma.EventSelect;
 export type EventCard = Prisma.EventGetPayload<{ select: typeof eventCard }>;
 
-export async function upcomingEvents(take = 6, category?: string) {
+async function upcomingEventsQuery(take = 6, category?: string) {
   return db.event.findMany({
     where: { ...publicWhere(), endsAt: { gte: new Date() }, ...(category ? { category: { slug: category, scope: 'EVENT' as const } } : {}) },
     orderBy: { startsAt: 'asc' },
@@ -238,7 +238,7 @@ export async function upcomingEvents(take = 6, category?: string) {
   });
 }
 
-export async function pastEvents(page = 1, category?: string) {
+async function pastEventsQuery(page = 1, category?: string) {
   const where: Prisma.EventWhereInput = { ...publicWhere(), endsAt: { lt: new Date() }, ...(category ? { category: { slug: category, scope: 'EVENT' } } : {}) };
   const [items, total] = await Promise.all([
     db.event.findMany({ where, orderBy: { startsAt: 'desc' }, take: PAGE_SIZE.events * page, select: eventCard }),
@@ -271,7 +271,7 @@ const creatorCard = {
 } satisfies Prisma.CreatorSelect;
 export type CreatorCard = Prisma.CreatorGetPayload<{ select: typeof creatorCard }>;
 
-export async function listCreators(opts: { q?: string; field?: string; page?: number }) {
+async function listCreatorsQuery(opts: { q?: string; field?: string; page?: number }) {
   const where: Prisma.CreatorWhereInput = { ...publicCreatorWhere };
   if (opts.q) where.searchText = { contains: normalizeForSearch(opts.q) };
   if (opts.field) where.fields = { some: { slug: opts.field, scope: 'FIELD' } };
@@ -283,7 +283,7 @@ export async function listCreators(opts: { q?: string; field?: string; page?: nu
   return { items, total, page, hasMore: items.length < total };
 }
 
-export async function getCreator(slug: string) {
+async function getCreatorQuery(slug: string) {
   return db.creator.findFirst({
     where: { slug, ...publicCreatorWhere },
     select: {
@@ -300,13 +300,13 @@ export async function getCreator(slug: string) {
   });
 }
 
-export const categories = cache(async (scope: 'WORK' | 'ARTICLE' | 'EVENT' | 'FIELD') =>
+export const categories = cached('categories', async (scope: 'WORK' | 'ARTICLE' | 'EVENT' | 'FIELD') =>
   db.category.findMany({ where: { scope }, orderBy: { sortOrder: 'asc' } }),
 );
 
 // ───────── الرئيسية ─────────
 
-export async function homeFeatures(slot: string) {
+async function homeFeaturesQuery(slot: string) {
   return db.homeFeature.findMany({
     where: { slot, active: true },
     orderBy: { sortOrder: 'asc' },
@@ -314,7 +314,7 @@ export async function homeFeatures(slot: string) {
   });
 }
 
-export async function resolveFeatureTargets(features: Awaited<ReturnType<typeof homeFeatures>>, lang: 'ar' | 'en') {
+async function resolveFeatureTargetsQuery(features: Awaited<ReturnType<typeof homeFeatures>>, lang: 'ar' | 'en') {
   const personName = (c: { displayName: string; displayNameEn: string | null }) => (lang === 'en' && c.displayNameEn ? c.displayNameEn : c.displayName);
   const ids = (type: string) => features.filter((f) => f.targetType === type).map((f) => f.targetId);
   const [works, articles] = await Promise.all([
@@ -348,10 +348,32 @@ export async function resolveFeatureTargets(features: Awaited<ReturnType<typeof 
     .filter((x): x is NonNullable<typeof x> => !!x);
 }
 
-export async function spotlightCreator() {
+async function spotlightCreatorQuery() {
   const f = await db.homeFeature.findFirst({ where: { slot: 'SPOTLIGHT', active: true, targetType: 'CREATOR' }, orderBy: { sortOrder: 'asc' }, include: { imageOverride: { select: mediaSelect } } });
   if (!f) return null;
   const c = await db.creator.findFirst({ where: { id: f.targetId, ...publicCreatorWhere }, select: { ...creatorCard, quote: true, quoteEn: true } });
   if (!c) return null;
   return { ...c, image: f.imageOverride ?? c.photo };
 }
+
+// ───────── واجهات مخزّنة مؤقتًا (60 ثانية؛ تُفرغ عند الحفظ من الإدارة) ─────────
+// getEvent غير مخزّن: عدد المقاعد المتبقية يجب أن يكون دقيقًا.
+export const latestIssue = cached('latestIssue', latestIssueQuery);
+export const listIssues = cached('listIssues', listIssuesQuery);
+export const issueYears = cached('issueYears', issueYearsQuery);
+export const getIssue = cached('getIssue', getIssueQuery);
+export const relatedIssues = cached('relatedIssues', relatedIssuesQuery);
+export const listWorks = cached('listWorks', listWorksQuery);
+export const getWork = cached('getWork', getWorkQuery);
+export const relatedWorks = cached('relatedWorks', relatedWorksQuery);
+export const listArticles = cached('listArticles', listArticlesQuery);
+export const featuredArticle = cached('featuredArticle', featuredArticleQuery);
+export const getArticle = cached('getArticle', getArticleQuery);
+export const relatedArticles = cached('relatedArticles', relatedArticlesQuery);
+export const upcomingEvents = cached('upcomingEvents', upcomingEventsQuery);
+export const pastEvents = cached('pastEvents', pastEventsQuery);
+export const listCreators = cached('listCreators', listCreatorsQuery);
+export const getCreator = cached('getCreator', getCreatorQuery);
+export const homeFeatures = cached('homeFeatures', homeFeaturesQuery);
+export const resolveFeatureTargets = cached('resolveFeatureTargets', resolveFeatureTargetsQuery);
+export const spotlightCreator = cached('spotlightCreator', spotlightCreatorQuery);
