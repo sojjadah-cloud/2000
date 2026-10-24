@@ -18,5 +18,6 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|brand/|demo/|vendor/).*)'],
+  // api/ مستثنى: الوسيط يقص جسم الطلب عند 10 م.ب افتراضيًا فتتلف رفعات الملفات
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|brand/|demo/|vendor/|api/).*)'],
 };

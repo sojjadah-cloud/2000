@@ -247,18 +247,20 @@ export async function pastEvents(page = 1, category?: string) {
   return { items, total, page, hasMore: items.length < total };
 }
 
+export function eventDetailInclude() {
+  return {
+    category: true,
+    poster: { select: mediaSelect },
+    speakers: { orderBy: { sortOrder: 'asc' as const }, include: { creator: { select: creatorPublicSelect } } },
+    partners: { where: { visible: true }, orderBy: { sortOrder: 'asc' as const }, include: { logo: { select: mediaSelect } } },
+    media: { orderBy: { sortOrder: 'asc' as const }, include: { asset: { select: mediaSelect } } },
+    _count: { select: { registrations: { where: { status: 'CONFIRMED' as const } } } },
+  } satisfies Prisma.EventInclude;
+}
+export type EventDetail = Prisma.EventGetPayload<{ include: ReturnType<typeof eventDetailInclude> }>;
+
 export async function getEvent(slug: string) {
-  return db.event.findFirst({
-    where: { slug, ...publicWhere() },
-    include: {
-      category: true,
-      poster: { select: mediaSelect },
-      speakers: { orderBy: { sortOrder: 'asc' }, include: { creator: { select: creatorPublicSelect } } },
-      partners: { where: { visible: true }, orderBy: { sortOrder: 'asc' }, include: { logo: { select: mediaSelect } } },
-      media: { orderBy: { sortOrder: 'asc' }, include: { asset: { select: mediaSelect } } },
-      _count: { select: { registrations: { where: { status: 'CONFIRMED' } } } },
-    },
-  });
+  return db.event.findFirst({ where: { slug, ...publicWhere() }, include: eventDetailInclude() });
 }
 
 // ───────── المبدعون ─────────
@@ -287,10 +289,11 @@ export async function getCreator(slug: string) {
     select: {
       ...creatorCard,
       quote: true,
+      quoteEn: true,
       website: true,
       socialLinks: true,
       works: { where: { work: publicWhere() }, orderBy: { sortOrder: 'asc' }, select: { work: { select: workCard } } },
-      articles: { where: { article: publicWhere() }, select: { article: { select: articleCard } } },
+      articles: { where: { article: { ...publicWhere(), ...originalsOnly } }, select: { article: { select: articleCard } } },
       issues: { where: { issue: publicWhere() }, select: { role: true, issue: { select: issueCard } } },
       events: { where: { event: publicWhere() }, select: { event: { select: eventCard } } },
     },
