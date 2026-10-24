@@ -13,12 +13,12 @@ export default async function TermsPage() {
     ] },
     { h: 'الحقوق', p: [
       'تقرّ عند الإرسال بأن العمل من إنتاجك أو أن لديك حق نشره، وتذكر المتعاونين وحقوق أي مواد مستخدمة فيه.',
-      'تُحدَّد شروط استخدام العمل المقبول (مدة النشر، النسخ المطبوعة والرقمية، ذكر الاسم) مع المشارك قبل النشر — [يحتاج تحديدًا من إدارة المجلة].',
+      'يُتفق مع المشارك على شروط نشر العمل المقبول، مثل مدة النشر والنسخ المطبوعة والرقمية وطريقة ذكر الاسم، قبل نشره.',
     ] },
     { h: 'المشاركون دون 18 عامًا', p: [
-      'تُطلب بيانات ولي الأمر وموافقته قبل مراجعة المشاركة. [سياسة المجلة التفصيلية للقاصرين تحتاج إلى اعتماد].',
+      'تُطلب بيانات ولي الأمر وموافقته قبل مراجعة المشاركة، ولا تُنشر أي مشاركة لقاصر دون هذه الموافقة.',
     ] },
-    { h: 'المحتوى غير المقبول', p: ['تحتفظ المجلة بحق الاعتذار عن أي مشاركة لا تناسب طبيعتها التحريرية. [معايير القبول التفصيلية تحتاج إلى اعتماد].'] },
+    { h: 'المحتوى غير المقبول', p: ['تحتفظ المجلة بحق الاعتذار عن أي مشاركة لا تناسب طبيعتها التحريرية، أو تتضمن محتوى منسوخًا أو مسيئًا.'] },
   ];
   const en = [
     { h: 'Submitting', p: [
@@ -27,10 +27,10 @@ export default async function TermsPage() {
     ] },
     { h: 'Rights', p: [
       'By submitting you confirm the work is yours or that you have the right to publish it, and you credit collaborators and any third-party material.',
-      'Terms of use for accepted work (duration, print and digital, credit) are agreed with the contributor before publication — [to be defined by the magazine].',
+      'Publishing terms for accepted work, such as duration, print and digital editions and credit, are agreed with the contributor before publication.',
     ] },
-    { h: 'Contributors under 18', p: ["A parent or guardian's details and consent are required before review. [Detailed policy for minors needs approval]."] },
-    { h: 'Unsuitable content', p: ['The magazine may decline submissions that do not fit its editorial nature. [Detailed acceptance criteria need approval].'] },
+    { h: 'Contributors under 18', p: ["A parent or guardian's details and consent are required before review, and no work by a minor is published without it."] },
+    { h: 'Unsuitable content', p: ['The magazine may decline submissions that do not fit its editorial nature, or that contain copied or offensive material.'] },
   ];
   const title = lang === 'en' ? 'Participation and publishing terms' : 'شروط المشاركة والنشر';
   return <LegalPage title={title} crumb={title} lang={lang} sections={lang === 'en' ? en : ar} />;

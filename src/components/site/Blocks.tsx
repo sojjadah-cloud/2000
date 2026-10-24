@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ChevronDown, Sparkles } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { Coil } from '@/components/brand/Coil';
 import { sanitizeRich } from '@/lib/sanitize';
 import { Arrow } from './Arrow';
@@ -50,15 +50,6 @@ export function EmptyState({ title, text, action }: { title: string; text?: stri
         </Link>
       )}
     </div>
-  );
-}
-
-/** وسم المحتوى التجريبي حتى لا يُقدَّم كحقيقة. */
-export function DemoBadge({ label }: { label: string }) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-yellow-50 px-3 py-1 text-xs font-semibold text-navy">
-      <Sparkles aria-hidden size={13} /> {label}
-    </span>
   );
 }
 

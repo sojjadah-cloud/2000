@@ -8,7 +8,7 @@ import { creditName, type ArticleCard, type ArticleDetail } from '@/lib/queries/
 import { appUrl } from '@/lib/tokens';
 import { Breadcrumbs } from '@/components/site/PageIntro';
 import { Media } from '@/components/site/Media';
-import { DemoBadge, RichText, SectionTitle } from '@/components/site/Blocks';
+import { RichText, SectionTitle } from '@/components/site/Blocks';
 import { ArticleCardView, Avatar } from '@/components/site/Cards';
 import { ShareLinks } from '@/components/site/ShareLinks';
 import { Arrow } from '@/components/site/Arrow';
@@ -34,8 +34,7 @@ export function ArticleView({ article, related, lang }: { article: ArticleDetail
       </div>
 
       <header className="container-site mt-6 max-w-[56rem] text-center">
-        {article.isDemo && <DemoBadge label={translate(article.lang === 'en' ? 'en' : 'ar', 'common.demo')} />}
-        <p className="eyebrow mt-3">{article.lang === 'en' ? article.category.nameEn : article.category.nameAr}</p>
+        <p className="eyebrow">{article.lang === 'en' ? article.category.nameEn : article.category.nameAr}</p>
         <h1 className="mt-2 text-h1 font-bold text-navy">{article.title}</h1>
         <p className="mx-auto mt-4 max-w-2xl text-[length:clamp(1.1rem,1.8vw,1.3rem)] leading-[1.85] text-navy/85">{article.excerpt}</p>
         <p className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[0.92rem] text-ink-muted">

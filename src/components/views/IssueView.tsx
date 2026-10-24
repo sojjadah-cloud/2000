@@ -6,7 +6,7 @@ import { creditName, localizeArticle, type IssueCard, type IssueDetail } from '@
 import { appUrl } from '@/lib/tokens';
 import { Breadcrumbs } from '@/components/site/PageIntro';
 import { Media, MediaPlaceholder } from '@/components/site/Media';
-import { DemoBadge, RichText, SectionTitle } from '@/components/site/Blocks';
+import { RichText, SectionTitle } from '@/components/site/Blocks';
 import { IssueCardView, formatLabel, languageLabel } from '@/components/site/Cards';
 import { ShareLinks } from '@/components/site/ShareLinks';
 import { Arrow } from '@/components/site/Arrow';
@@ -44,8 +44,7 @@ export function IssueView({ issue, related, lang }: { issue: IssueDetail; relate
       {/* الغلاف والمعلومات */}
       <header className="container-site mt-6 grid gap-8 md:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] md:items-start lg:gap-14">
         <div className="text-center md:text-start">
-          {issue.isDemo && <DemoBadge label={t('common.demo')} />}
-          <p className="mt-3 text-[0.95rem] font-semibold text-ink-muted">
+          <p className="text-[0.95rem] font-semibold text-ink-muted">
             {t('issues.number')} <span className="ltr-iso">{issue.number}</span>
           </p>
           <h1 className="mt-1 text-h1 font-bold text-navy" lang={title.lang}>

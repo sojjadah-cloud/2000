@@ -16,9 +16,6 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: `${t('about.title')} ${t('about.titleHighlight')}` };
 }
 
-const isDraft = (s?: string | null) => !!s && s.startsWith('نص مبدئي');
-const clean = (s: string) => s.replace(/^نص مبدئي:\s*/, '').replace(/\s*\(يُستبدل[^)]*\)\s*$/, '');
-
 export default async function AboutPage() {
   const { t, lang } = await getT();
   const settings = await getSettings();
@@ -29,7 +26,6 @@ export default async function AboutPage() {
     db.achievement.findMany({ where: { visible: true }, orderBy: { sortOrder: 'asc' } }),
     db.partner.findMany({ where: { visible: true }, orderBy: { sortOrder: 'asc' }, include: { logo: true } }),
   ]);
-  const anyDraft = [settings.aboutStory, settings.aboutVision, settings.aboutMission].some(isDraft);
   const blocks = [
     { id: 'story', title: t('about.story'), text: settings.aboutStory },
     { id: 'vision', title: t('about.vision'), text: settings.aboutVision },
@@ -42,11 +38,6 @@ export default async function AboutPage() {
 
       {blocks.length > 0 && (
         <section className="container-site mt-8" aria-label={t('about.story')}>
-          {anyDraft && (
-            <p role="note" className="mb-5 inline-block rounded bg-yellow-50 px-4 py-2 text-sm text-navy">
-              {t('common.draftNotice')}
-            </p>
-          )}
           <div className="grid gap-6 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
             <div className="flex items-center justify-center bg-navy p-10 md:order-last">
               <Logo variant="white" width={180} label={t('brand.logo')} />
@@ -56,7 +47,7 @@ export default async function AboutPage() {
                 <div key={b.id} className="border-s-4 border-orange bg-white ps-5">
                   <h2 className="text-[1.4rem] font-bold text-navy">{b.title}</h2>
                   <p className="mt-2 max-w-[var(--container-read)] text-[1.05rem] leading-[1.95] text-navy/90" lang="ar">
-                    {clean(b.text!)}
+                    {b.text}
                   </p>
                 </div>
               ))}

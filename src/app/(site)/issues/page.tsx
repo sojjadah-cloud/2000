@@ -42,7 +42,7 @@ export default async function IssuesPage({ searchParams }: { searchParams: Promi
       <section aria-labelledby="browse-title" className="container-site pt-6 pb-[var(--spacing-section)] md:pt-5">
         <div className="border-t border-line pt-6">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <SectionTitle id="browse-title" note={latest?.title ? t('issues.browseNote') : undefined}>
+            <SectionTitle id="browse-title">
               {t('issues.browse')}
             </SectionTitle>
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center lg:justify-end">

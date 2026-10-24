@@ -7,6 +7,7 @@ import { randomBytes } from 'node:crypto';
 import { mkdirSync, writeFileSync, existsSync, statSync } from 'node:fs';
 import { DEFAULT_ROLES } from '../src/lib/permissions';
 import { buildSearchText, readingMinutes } from '../src/lib/text';
+import { ABOUT, ISSUE13_EDITORIAL, POEM_AR, POEM_EN, POEM_EXCERPT, WORK_COPY } from './demo-copy';
 
 const db = new PrismaClient();
 
@@ -191,8 +192,6 @@ async function main() {
     const c = await db.creator.create({
       data: {
         slug, displayName: name, displayNameEn: nameEn, headline, headlineEn,
-        bio: 'نبذة تجريبية لعرض تصميم ملف المبدع. تُستبدل بالنبذة المعتمدة من صاحب الملف.',
-        bioEn: 'Demo bio to show the creator profile layout. To be replaced with the approved bio.',
         quoteEn: slug === 'sara-albalushiya'
           ? 'Through my lens I look for the simple moments that carry a bigger story. Place in Oman always tells us something, and people are the heart of that story.'
           : null,
@@ -230,7 +229,7 @@ async function main() {
         promoImageId: d.n === 13 ? media['issues-hero-magazines'] : null,
         pdfId: d.n === 13 ? pdf?.id : null, allowDownload: d.n === 13,
         editorialHtml: d.n === 13
-          ? '<p>كلمة تحرير تجريبية لعرض تصميم صفحة العدد. تُستبدل بالكلمة المعتمدة من فريق التحرير.</p><p>نلتقي في هذا العدد حول سؤال المكان: كيف يصنعنا، وكيف نعيد نحن صناعته بالكلمة والصورة.</p>'
+          ? ISSUE13_EDITORIAL
           : '',
         status: 'PUBLISHED', publishedAt: new Date(d.date + 'T00:00:00Z'), isDemo: true,
         searchText: buildSearchText(d.title, d.theme, d.summary, `العدد ${d.n}`, String(d.n), d.themeEn, `issue ${d.n}`),
@@ -266,8 +265,8 @@ async function main() {
     const w = await db.creativeWork.create({
       data: {
         slug: d.slug, title: d.title, titleEn: d.titleEn, categoryId: cat[`WORK:${d.c}`], thumbnailId: media[d.img],
-        description: '<p>وصف تجريبي للعمل لعرض تصميم صفحة العمل. يُستبدل بوصف المبدع المعتمد.</p>',
-        descriptionEn: "<p>Demo description to show the work page layout. To be replaced with the creator's approved text.</p>",
+        description: `<p>${WORK_COPY[d.slug].ar}</p>`,
+        descriptionEn: `<p>${WORK_COPY[d.slug].en}</p>`,
         editorsPick: !!d.pick, sortOrder: i, year: 2024, issueId: issue[13], issueOrder: i + 1,
         status: 'PUBLISHED', publishedAt: new Date(base - i * 86_400_000), isDemo: true,
         rights: `© ${name}. جميع الحقوق محفوظة للمبدع.`,
@@ -281,7 +280,6 @@ async function main() {
 
   // ───── المقالات ─────
   const body = (intro: string) => `<p>${intro}</p>
-<p>هذا نص عرض تجريبي لصفحة القراءة، يوضح طول السطر وارتفاعه ومساحة القراءة المريحة. يُستبدل بالنص المعتمد من الكاتب قبل النشر.</p>
 <h2>المكان بوصفه ذاكرة</h2>
 <p>تتراكم في الأماكن طبقات من الحكايات؛ جدار قديم، باب خشبي، ظل نخلة على الأرض. كل تفصيل منها يفتح بابًا لسؤال جديد عن الناس الذين مرّوا من هنا.</p>
 <blockquote>المكان لا يحفظ الحكاية فقط، بل يعيد روايتها لكل من يصغي إليه.</blockquote>
@@ -291,7 +289,6 @@ async function main() {
 <p>ربما تكون الكتابة طريقة أخرى للبقاء في المكان حتى بعد مغادرته، وطريقة لدعوة الآخرين إليه.</p>`;
 
   const bodyEn = (intro: string) => `<p>${intro}</p>
-<p>This is demo text for the reading page, showing line length, line height and a comfortable reading measure. It will be replaced with the author's approved text before publishing.</p>
 <h2>Place as memory</h2>
 <p>Places hold layers of stories: an old wall, a wooden door, the shadow of a palm on the ground. Each detail opens a new question about the people who passed through.</p>
 <blockquote>A place does not only keep the story; it retells it to anyone who listens.</blockquote>
@@ -307,17 +304,17 @@ async function main() {
     { slug: 'the-city-as-i-see-it', title: 'المدينة كما أراها', excerpt: 'تأملات بصرية في تفاصيل الحياة اليومية في مسقط.', titleEn: 'The city as I see it', excerptEn: 'Visual reflections on the details of daily life in Muscat.', c: 'texts', tag: 'writing', by: 'ali-alrashidi', cover: 'writing-city-i-see', date: '2024-04-28' },
     { slug: 'places-that-inhabit-us', title: 'الأماكن التي تسكننا', excerpt: 'عن البيوت والسواحل والأزقة التي نحملها معنا أينما ذهبنا.', titleEn: 'The places that live in us', excerptEn: 'On the homes, shores and alleys we carry with us wherever we go.', c: 'essays', by: 'ahmed-alamri', cover: 'work-sea-tale', date: '2024-04-10', featured: true },
     { slug: 'tales-from-old-alleys', title: 'حكايات من الأزقة القديمة', excerpt: 'مشي بطيء في الحارات القديمة، حيث تحكي الجدران ما لا تقوله الكتب.', titleEn: 'Tales from the old alleys', excerptEn: 'A slow walk through old neighbourhoods, where walls tell what books do not.', c: 'essays', tag: 'culture', by: 'ahmed-alamri', cover: 'pick-old-alleys', date: '2024-04-02' },
-    { slug: 'a-poem-for-the-sea', title: 'قصيدة للبحر', excerpt: 'نص شعري تجريبي لعرض الحفاظ على فواصل الأسطر.', titleEn: 'A poem for the sea', excerptEn: 'A demo poem showing that line breaks are preserved.', c: 'poetry', by: 'noura-alsaadiya', cover: 'work-free-spaces', date: '2024-03-20', poem: true },
+    { slug: 'a-poem-for-the-sea', title: 'قصيدة للبحر', excerpt: POEM_EXCERPT.ar, titleEn: 'A poem for the sea', excerptEn: POEM_EXCERPT.en, c: 'poetry', by: 'noura-alsaadiya', cover: 'work-free-spaces', date: '2024-03-20', poem: true },
   ];
   const article: Record<string, string> = {};
   for (const d of articleDefs) {
     const name = creatorDefs.find((c) => c[0] === d.by)![1];
     const nameEn = creatorDefs.find((c) => c[0] === d.by)![4];
     const html = d.poem
-      ? '<p class="poem">يا بحرُ، خذ من صوتي ما يكفي\nلتعود الموجةُ إلى أولها\nوخذ من الرمل ذاكرةً\nلا تشبه أحدًا سواك</p><p class="poem">(نص تجريبي لعرض الشعر)\nتبقى الأسطر كما كُتبت\nدون أن تُدمج في فقرة واحدة</p>'
+      ? POEM_AR
       : body(d.excerpt);
     const htmlEn = d.poem
-      ? '<p class="poem">O sea, take from my voice what is enough\nfor the wave to return to where it began\nand take from the sand a memory\nthat resembles no one but you</p><p class="poem">(demo poem)\nThe lines stay as they were written\nwithout merging into one paragraph</p>'
+      ? POEM_EN
       : bodyEn(d.excerptEn);
     // النسخة الإنجليزية مادة مستقلة مرتبطة بالأصل
     const en = await db.article.create({
@@ -334,7 +331,6 @@ async function main() {
         slug: d.slug, title: d.title, excerpt: d.excerpt, bodyHtml: html, categoryId: cat[`ARTICLE:${d.c}`], coverId: media[d.cover],
         tags: d.tag ? { connect: { id: tags[d.tag] } } : undefined, featured: !!d.featured, readingMinutes: readingMinutes(html),
         issueId: issue[13], issueOrder: 20, status: 'PUBLISHED', publishedAt: new Date(d.date + 'T06:00:00Z'), isDemo: true,
-        sources: d.poem ? null : 'مصدر تجريبي للعرض — يُستبدل بالمصادر الفعلية',
         searchText: buildSearchText(d.title, d.excerpt, name),
         authors: { create: { creatorId: creator[d.by] } },
         translationId: en.id,
@@ -355,7 +351,6 @@ async function main() {
       slug: 'creativity-and-place', title: 'جلسة حوارية: الإبداع والمكان', titleEn: 'Talk: Creativity and Place', categoryId: cat['EVENT:sessions'],
       posterId: media['event-creativity-place'], summary: 'جلسة حوارية تجمع مبدعين شبابًا للحديث عن أثر المكان في أعمالهم.',
       summaryEn: 'A conversation with young creatives on how place shapes their work.', venueEn: 'Oman Across Ages Museum',
-      descriptionHtml: '<p>وصف تجريبي للفعالية لعرض تصميم الصفحة. يُستبدل بالتفاصيل المعتمدة.</p>',
       startsAt: start, endsAt: end, venue: 'متحف عُمان عبر الزمان', language: 'العربية', audience: 'الشباب والمهتمون بالإبداع',
       capacity: 40, fee: 'مجاني', registrationEnabled: true, instructions: 'يُرجى الحضور قبل الموعد بربع ساعة.',
       status: 'PUBLISHED', publishedAt: new Date('2024-05-01T00:00:00Z'), isDemo: true,
@@ -392,9 +387,9 @@ async function main() {
       heroTextEn: 'Young voices, stories told,\nand creativity worth being seen.',
       tickerWords: ['فنون', 'كتابة', 'تصوير', 'ثقافة', 'إبداع'],
       tickerWordsEn: ['Arts', 'Writing', 'Photography', 'Culture', 'Creativity'],
-      aboutStory: 'نص مبدئي: ألفين منصة مجلة شبابية عُمانية تجمع الإبداع والفنون والكتابة والثقافة في مساحة واحدة. (يُستبدل بالقصة المعتمدة)',
-      aboutVision: 'نص مبدئي: مساحة لجيلٍ يبدع.',
-      aboutMission: 'نص مبدئي: أصوات شابة، حكايات تُروى، وإبداع يستحق أن يُرى.',
+      aboutStory: ABOUT.story,
+      aboutVision: ABOUT.vision,
+      aboutMission: ABOUT.mission,
       aboutFields: ['فنون', 'كتابة', 'تصوير', 'ثقافة', 'إبداع'],
     },
   });

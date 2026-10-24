@@ -7,7 +7,7 @@ import { creditName, type EventDetail } from '@/lib/queries/content';
 import { appUrl } from '@/lib/tokens';
 import { Breadcrumbs } from '@/components/site/PageIntro';
 import { Media, MediaPlaceholder } from '@/components/site/Media';
-import { DemoBadge, RichText, SectionTitle } from '@/components/site/Blocks';
+import { RichText, SectionTitle } from '@/components/site/Blocks';
 import { Gallery } from '@/components/site/Gallery';
 import { ShareLinks } from '@/components/site/ShareLinks';
 import { RegistrationForm } from '@/components/site/RegistrationForm';
@@ -47,7 +47,6 @@ export function EventView({ event, lang, dir }: { event: EventDetail; lang: Lang
             </div>
           )}
           <div className="mt-6 flex flex-wrap items-center gap-2">
-            {event.isDemo && <DemoBadge label={t('common.demo')} />}
             <span className="eyebrow">{lang === 'en' ? event.category.nameEn : event.category.nameAr}</span>
             <span className={`rounded-full px-3 py-1 text-[0.8rem] font-semibold ${STATE_TONE[state]}`}>{t(`events.state.${state}`)}</span>
           </div>

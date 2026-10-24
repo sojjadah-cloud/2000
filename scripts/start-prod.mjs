@@ -39,6 +39,14 @@ if (applied !== schemaHash) {
   log('المخطط محدّث؛ لا حاجة لتطبيقه.');
 }
 
+// تحديثات نصوص المحتوى لمرة واحدة (prisma/patch-copy.ts) — تُطبَّق إن لم تُسجَّل بعد
+const COPY_PATCH_ID = 'copy-cleanup-1';
+const copyPatch = (await db.appMeta.findUnique({ where: { key: 'copy_patch' } }).catch(() => null))?.value;
+if (copyPatch !== COPY_PATCH_ID) {
+  log('تحديث نصوص المحتوى…');
+  if (!run('tsx', ['prisma/patch-copy.ts'])) console.error('[start] تعذّر تحديث النصوص؛ يستمر التشغيل.');
+}
+
 if (process.env.SEED_DEMO === '1') {
   const seeded = await db.issue.count({ where: { isDemo: true } }).catch(() => 0);
   if (!seeded) {

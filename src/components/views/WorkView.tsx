@@ -6,7 +6,7 @@ import { creditName, type WorkCard, type WorkDetail } from '@/lib/queries/conten
 import { appUrl } from '@/lib/tokens';
 import { Breadcrumbs } from '@/components/site/PageIntro';
 import { Media } from '@/components/site/Media';
-import { DemoBadge, RichText, SectionTitle } from '@/components/site/Blocks';
+import { RichText, SectionTitle } from '@/components/site/Blocks';
 import { Avatar, WorkCardView } from '@/components/site/Cards';
 import { Gallery, VideoPlayer } from '@/components/site/Gallery';
 import { ShareLinks } from '@/components/site/ShareLinks';
@@ -54,8 +54,7 @@ export function WorkView({ work, related, lang, dir }: { work: WorkDetail; relat
         </div>
 
         <div className="lg:sticky lg:top-28 lg:self-start">
-          {work.isDemo && <DemoBadge label={t('common.demo')} />}
-          <p className="eyebrow mt-3">{lang === 'en' ? work.category.nameEn : work.category.nameAr}</p>
+          <p className="eyebrow">{lang === 'en' ? work.category.nameEn : work.category.nameAr}</p>
           <h1 className="mt-1 text-h1 font-bold text-navy" lang={title.lang}>
             {title.text}
           </h1>
